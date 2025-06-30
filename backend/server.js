@@ -1,6 +1,6 @@
 import express from 'express';
 import cors from 'cors';
-import { tool, agent } from "llamaindex";
+import { agent } from "llamaindex";
 import { Ollama } from "@llamaindex/ollama";
 import { z } from "zod";
 import { Estudiantes } from "../src/lib/estudiantes.js"; // Adjust path if needed
@@ -13,14 +13,9 @@ app.use(express.json());
 const estudiantes = new Estudiantes();
 
 const systemPrompt = `
-Sos un asistente para gestionar estudiantes.
-Tu tarea es ayudar a consultar o modificar una base de datos de alumnos.
-Usá las herramientas disponibles para:
-- Buscar estudiantes por nombre o apellido
-- Agregar nuevos estudiantes
-- Mostrar la lista completa de estudiantes
-Respondé de forma clara y breve.
-Si hay registros duplicados, eliminalos.
+Sos un asistente que ayuda a la gente con sus problemas legales.
+Tu objetivo es orientar en base al código penal argentino y la constitución argentina.
+Simplemente debes responder las preguntas que te hagan.
 `.trim();
 
 const ollamaLLM = new Ollama({
@@ -29,55 +24,8 @@ const ollamaLLM = new Ollama({
   timeout: 2 * 60 * 1000,
 });
 
-// Tools (copy them from src/main.js)
-const buscarPorNombreTool = tool({
-  name: "buscarPorNombre",
-  description: "Busca estudiantes por nombre",
-  parameters: z.object({
-    nombre: z.string().describe("El nombre del estudiante"),
-  }),
-  execute: ({ nombre }) => estudiantes.buscarEstudiantePorNombre(nombre),
-});
-
-const buscarPorApellidoTool = tool({
-  name: "buscarPorApellido",
-  description: "Busca estudiantes por apellido",
-  parameters: z.object({
-    apellido: z.string().describe("El apellido del estudiante"),
-  }),
-  execute: ({ apellido }) => estudiantes.buscarEstudiantePorApellido(apellido),
-});
-
-const agregarEstudianteTool = tool({
-  name: "agregarEstudiante",
-  description: "Agrega un estudiante a la base",
-  parameters: z.object({
-    nombre: z.string().describe("El nombre del estudiante"),
-    apellido: z.string().describe("El apellido del estudiante"),
-    curso: z.string().describe("El curso del estudiante"),
-  }),
-  execute: ({ nombre, apellido, curso }) => {
-    try {
-      estudiantes.agregarEstudiante(nombre, apellido, curso);
-      return `El alumno ${nombre}, ${apellido}, ${curso} ha sido agregado correctamente.`;
-    } catch (e) {
-      // If duplicate or other error, show user-friendly message
-      return e.message === "El alumno ya existe en la lista."
-        ? "Este alumno ya existe en la lista."
-        : "No se pudo agregar el alumno: " + e.message;
-    }
-  },
-});
-
-const listarEstudiantesTool = tool({
-  name: "listarEstudiantes",
-  description: "Lista todos los estudiantes",
-  parameters: z.object({}),
-  execute: () => estudiantes.listarEstudiantes(),
-});
-
 const agente = agent({
-  tools: [buscarPorNombreTool, buscarPorApellidoTool, agregarEstudianteTool, listarEstudiantesTool],
+  tools: [],
   llm: ollamaLLM,
   verbose: false,
   systemPrompt,

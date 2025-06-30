@@ -8,15 +8,7 @@ const ChatInterface = () => {
     const [messages, setMessages] = useState([
         {
             sender: "bot",
-            text: marked(`
-¡Hola! Soy tu asistente para gestionar estudiantes.
-Puedo ayudarte a:
-- Buscar estudiantes por nombre o apellido
-- Agregar nuevos estudiantes
-- Mostrar la lista completa de estudiantes
-
-¿Qué necesitás?
-`)
+            text: marked("¡Hola! Soy tu asistente legal. ¿En qué puedo ayudarte?")
         }
     ]);
     const [input, setInput] = useState("");
