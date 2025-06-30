@@ -1,11 +1,14 @@
 import React, { useState, useRef, useEffect } from "react";
-import axios from "axios"; // Add this import
+import axios from "axios";
+import { marked } from "marked";
+import DOMPurify from "dompurify"; // <--- Add this import
 const API_URL = "http://localhost:3001";
 
 const ChatInterface = () => {
     const [messages, setMessages] = useState([
         {
-            sender: "bot", text: `
+            sender: "bot",
+            text: marked(`
 ¡Hola! Soy tu asistente para gestionar estudiantes.
 Puedo ayudarte a:
 - Buscar estudiantes por nombre o apellido
@@ -13,7 +16,8 @@ Puedo ayudarte a:
 - Mostrar la lista completa de estudiantes
 
 ¿Qué necesitás?
-` }
+`)
+        }
     ]);
     const [input, setInput] = useState("");
     const [loading, setLoading] = useState(false);
@@ -37,13 +41,13 @@ Puedo ayudarte a:
             const res = await axios.post(`${API_URL}/api/chat`, { message: input });
             const botReply = {
                 sender: "bot",
-                text: res.data.reply// Adjust this to match your backend response shape
+                text: marked(res.data.reply) // <-- Parse reply with marked!
             };
             setMessages((prev) => [...prev, botReply]);
         } catch (err) {
             setMessages((prev) => [
                 ...prev,
-                { sender: "bot", text: "Error: could not reach backend." }
+                { sender: "bot", text: marked("Error: could not reach backend.") }
             ]);
         }
         setLoading(false);
@@ -61,9 +65,11 @@ Puedo ayudarte a:
                             background: m.sender === "user" ? "#3273dc" : "#f1f1f1",
                             color: m.sender === "user" ? "white" : "black"
                         }}
-                    >
-                        {m.text}
-                    </div>
+                        // Only use dangerouslySetInnerHTML for bot messages
+                        {...(m.sender === "bot"
+                            ? { dangerouslySetInnerHTML: { __html: DOMPurify.sanitize(m.text) } }
+                            : { children: m.text })}
+                    />
                 ))}
                 {loading && (
                     <div style={{ ...styles.message, fontStyle: "italic" }}>
