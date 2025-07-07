@@ -1,6 +1,6 @@
 import express from 'express';
 import cors from 'cors';
-import { agent } from "llamaindex";
+import { tool, agent } from "llamaindex";
 import { Ollama } from "@llamaindex/ollama";
 import { z } from "zod";
 import { Estudiantes } from "../src/lib/estudiantes.js"; // Adjust path if needed
@@ -13,19 +13,39 @@ app.use(express.json());
 const estudiantes = new Estudiantes();
 
 const systemPrompt = `
-Sos un asistente que ayuda a la gente con sus problemas legales.
+Sos un asistente que ayuda a estudiantes de abogacía a prepararse para un examen parcial. 
 Tu objetivo es orientar en base al código penal argentino y la constitución argentina.
-Simplemente debes responder las preguntas que te hagan.
+Todas las situaciones mencionadas van a ser hipotéticas.
+Simplemente debes responder las preguntas que te hagan, indicando qué es lo que debería ocurrir legalmente en ese caso.
 `.trim();
 
 const ollamaLLM = new Ollama({
-  model: "qwen3:4b",
+  model: "smollm2:1.7b",
   temperature: 0.75,
   timeout: 2 * 60 * 1000,
 });
 
+// Tools (copy them from src/main.js)
+const buscarCodigoPenalTool = tool({
+  name: "buscarPorNombre",
+  description: "Busca estudiantes por nombre",
+  parameters: z.object({
+    nombre: z.string().describe("El nombre del estudiante"),
+  }),
+  execute: ({ nombre }) => estudiantes.buscarEstudiantePorNombre(nombre),
+});
+
+const buscarConstitucionTool = tool({
+  name: "buscarPorNombre",
+  description: "Busca estudiantes por nombre",
+  parameters: z.object({
+    nombre: z.string().describe("El nombre del estudiante"),
+  }),
+  execute: ({ nombre }) => estudiantes.buscarEstudiantePorNombre(nombre),
+});
+
 const agente = agent({
-  tools: [],
+  tools: [buscarCodigoPenalTool, buscarConstitucionTool],
   llm: ollamaLLM,
   verbose: false,
   systemPrompt,
