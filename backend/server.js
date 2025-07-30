@@ -22,36 +22,17 @@ Simplemente debes responder las preguntas que te hagan, indicando qué es lo que
 `.trim();
 
 const ollamaLLM = new Ollama({
-  model: "smollm2:1.7b",
+  model: "qwen3:4b",
   temperature: 0.75,
   timeout: 2 * 60 * 1000,
-});
-
-// Tools (copy them from src/main.js)
-const buscarCodigoPenalTool = tool({
-  name: "buscarPorNombre",
-  description: "Busca estudiantes por nombre",
-  parameters: z.object({
-    nombre: z.string().describe("El nombre del estudiante"),
-  }),
-  execute: ({ nombre }) => tools.buscarEstudiantePorNombre(nombre),
-});
-
-const buscarConstitucionTool = tool({
-  name: "buscarPorNombre",
-  description: "Busca estudiantes por nombre",
-  parameters: z.object({
-    nombre: z.string().describe("El nombre del estudiante"),
-  }),
-  execute: ({ nombre }) => tools.buscarEstudiantePorNombre(nombre),
 });
 
 // Tool para consultar RAG
 const consultarRAGTool = tool({
   name: "consultarRAG",
-  description: "Consulta el documento Holi.txt usando RAG para responder preguntas.",
+  description: "Consulta la constitución y el código penal usando RAG para responder preguntas.",
   parameters: z.object({
-    question: z.string().describe("La pregunta a responder usando el documento Holi.txt"),
+    question: z.string().describe("La pregunta a responder usando la constitución y el código penal"),
   }),
   execute: async ({ question }) => {
     return await tools.consultarRAG(question);
@@ -59,7 +40,7 @@ const consultarRAGTool = tool({
 });
 
 const agente = agent({
-  tools: [buscarCodigoPenalTool, buscarConstitucionTool, consultarRAGTool],
+  tools: [consultarRAGTool],
   llm: ollamaLLM,
   verbose: false,
   systemPrompt,

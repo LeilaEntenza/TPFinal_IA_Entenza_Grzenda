@@ -16,14 +16,29 @@ class Tools {
 
   async initRAG() {
     try {
-      const holiText = await fs.readFile("./data/Holi.txt", "utf-8");
-      const docs = [new Document({ text: holiText, id_: "holi" })];
+      // Leer ambos PDFs y concatenar su texto
+      const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.js');
+      const readPdfText = async (filePath) => {
+        const data = await fs.readFile(filePath);
+        const pdf = await pdfjsLib.getDocument({ data }).promise;
+        let text = '';
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const content = await page.getTextContent();
+          text += content.items.map(item => item.str).join(' ') + '\n';
+        }
+        return text;
+      };
+      const codigoPenalText = await readPdfText("./data/CodigoPenal.pdf");
+      const constitucionText = await readPdfText("./data/Constitucion.pdf");
+      const fullText = codigoPenalText + "\n" + constitucionText;
+      const docs = [new Document({ text: fullText, id_: "codigo_constitucion" })];
       const index = await VectorStoreIndex.fromDocuments(docs);
       this.queryEngine = index.asQueryEngine();
       this.ragReady = true;
-      console.log("RAG index ready (from Tools)");
+      console.log("RAG index ready (from Tools, PDF)");
     } catch (e) {
-      console.error("Error setting up RAG in Tools:", e);
+      console.error("Error setting up RAG in Tools (PDF):", e);
     }
   }
 
