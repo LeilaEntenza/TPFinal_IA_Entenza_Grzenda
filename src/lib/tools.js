@@ -3,7 +3,7 @@ import { readFileSync, writeFileSync } from 'fs';
 
 const DATA_FILE = './data/alumnos.json';
 
-class Estudiantes {
+class Tools {
   constructor() {
     this.estudiantes = [];
     this.cargarEstudiantesDesdeJson();
@@ -63,4 +63,4 @@ class Estudiantes {
   }
 }
 
-export { Estudiantes }
+export { Tools }

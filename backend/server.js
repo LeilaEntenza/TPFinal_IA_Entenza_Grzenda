@@ -3,14 +3,14 @@ import cors from 'cors';
 import { tool, agent } from "llamaindex";
 import { Ollama } from "@llamaindex/ollama";
 import { z } from "zod";
-import { Estudiantes } from "../src/lib/estudiantes.js"; // Adjust path if needed
+import { Tools } from "../src/lib/tools.js"; // Adjust path if needed
 
 const app = express();
 app.use(cors({ origin: 'http://localhost:3000' }));
 app.use(express.json());
 
 // --- AGENT/TOOLS/LLM SETUP (from your CLI chat) ---
-const estudiantes = new Estudiantes();
+const tools = new Tools();
 
 const systemPrompt = `
 Sos un asistente que ayuda a estudiantes de abogacía a prepararse para un examen parcial. 
@@ -32,7 +32,7 @@ const buscarCodigoPenalTool = tool({
   parameters: z.object({
     nombre: z.string().describe("El nombre del estudiante"),
   }),
-  execute: ({ nombre }) => estudiantes.buscarEstudiantePorNombre(nombre),
+  execute: ({ nombre }) => tools.buscarEstudiantePorNombre(nombre),
 });
 
 const buscarConstitucionTool = tool({
@@ -41,7 +41,7 @@ const buscarConstitucionTool = tool({
   parameters: z.object({
     nombre: z.string().describe("El nombre del estudiante"),
   }),
-  execute: ({ nombre }) => estudiantes.buscarEstudiantePorNombre(nombre),
+  execute: ({ nombre }) => tools.buscarEstudiantePorNombre(nombre),
 });
 
 const agente = agent({
