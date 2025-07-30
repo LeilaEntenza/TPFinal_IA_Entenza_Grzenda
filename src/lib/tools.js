@@ -1,5 +1,7 @@
 // Gestión de estudiantes
 import { readFileSync, writeFileSync } from 'fs';
+import { Document, VectorStoreIndex } from "llamaindex";
+import fs from "fs/promises";
 
 // const DATA_FILE = './data/alumnos.json';
 
@@ -7,7 +9,32 @@ class Tools {
   constructor() {
     this.estudiantes = [];
     // this.cargarEstudiantesDesdeJson();
+    this.queryEngine = null;
+    this.ragReady = false;
+    this.initRAG();
   }
+
+  async initRAG() {
+    try {
+      const holiText = await fs.readFile("./data/Holi.txt", "utf-8");
+      const docs = [new Document({ text: holiText, id_: "holi" })];
+      const index = await VectorStoreIndex.fromDocuments(docs);
+      this.queryEngine = index.asQueryEngine();
+      this.ragReady = true;
+      console.log("RAG index ready (from Tools)");
+    } catch (e) {
+      console.error("Error setting up RAG in Tools:", e);
+    }
+  }
+
+  async consultarRAG(question) {
+    if (!this.ragReady || !this.queryEngine) {
+      throw new Error("RAG index not ready");
+    }
+    const response = await this.queryEngine.query(question);
+    return response.toString();
+  }
+
   /*
   cargarEstudiantesDesdeJson() {
     try {

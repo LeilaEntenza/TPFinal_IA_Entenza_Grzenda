@@ -46,8 +46,20 @@ const buscarConstitucionTool = tool({
   execute: ({ nombre }) => tools.buscarEstudiantePorNombre(nombre),
 });
 
+// Tool para consultar RAG
+const consultarRAGTool = tool({
+  name: "consultarRAG",
+  description: "Consulta el documento Holi.txt usando RAG para responder preguntas.",
+  parameters: z.object({
+    question: z.string().describe("La pregunta a responder usando el documento Holi.txt"),
+  }),
+  execute: async ({ question }) => {
+    return await tools.consultarRAG(question);
+  },
+});
+
 const agente = agent({
-  tools: [buscarCodigoPenalTool, buscarConstitucionTool],
+  tools: [buscarCodigoPenalTool, buscarConstitucionTool, consultarRAGTool],
   llm: ollamaLLM,
   verbose: false,
   systemPrompt,
@@ -131,20 +143,6 @@ app.post('/api/chat', async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Error procesando el mensaje' });
-  }
-});
-
-// --- API RAG ROUTE ---
-app.post('/api/rag', async (req, res) => {
-  const { question } = req.body;
-  if (!question) return res.status(400).json({ error: 'No question provided' });
-  if (!queryEngine) return res.status(503).json({ error: 'RAG index not ready' });
-  try {
-    const response = await queryEngine.query(question);
-    res.json({ reply: response.toString() });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Error procesando la consulta RAG' });
   }
 });
 
