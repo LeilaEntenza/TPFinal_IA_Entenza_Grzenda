@@ -22,17 +22,36 @@ Simplemente debes responder las preguntas que te hagan, indicando qué es lo que
 `.trim();
 
 const ollamaLLM = new Ollama({
-  model: "qwen3:4b",
+  model: "smollm2:1.7b",
   temperature: 0.75,
   timeout: 2 * 60 * 1000,
+});
+
+// Tools (copy them from src/main.js)
+const buscarCodigoPenalTool = tool({
+  name: "buscarPorNombre",
+  description: "Busca estudiantes por nombre",
+  parameters: z.object({
+    nombre: z.string().describe("El nombre del estudiante"),
+  }),
+  execute: ({ nombre }) => tools.buscarEstudiantePorNombre(nombre),
+});
+
+const buscarConstitucionTool = tool({
+  name: "buscarPorNombre",
+  description: "Busca estudiantes por nombre",
+  parameters: z.object({
+    nombre: z.string().describe("El nombre del estudiante"),
+  }),
+  execute: ({ nombre }) => tools.buscarEstudiantePorNombre(nombre),
 });
 
 // Tool para consultar RAG
 const consultarRAGTool = tool({
   name: "consultarRAG",
-  description: "Consulta la constitución y el código penal usando RAG para responder preguntas.",
+  description: "Consulta el documento Holi.txt usando RAG para responder preguntas.",
   parameters: z.object({
-    question: z.string().describe("La pregunta a responder usando la constitución y el código penal"),
+    question: z.string().describe("La pregunta a responder usando el documento Holi.txt"),
   }),
   execute: async ({ question }) => {
     return await tools.consultarRAG(question);
@@ -40,25 +59,11 @@ const consultarRAGTool = tool({
 });
 
 const agente = agent({
-  tools: [consultarRAGTool],
+  tools: [buscarCodigoPenalTool, buscarConstitucionTool, consultarRAGTool],
   llm: ollamaLLM,
   verbose: false,
   systemPrompt,
 });
-
-// --- RAG SETUP ---
-let queryEngine;
-(async () => {
-  try {
-    const holiText = await fs.readFile("./data/Holi.txt", "utf-8");
-    const docs = [new Document({ text: holiText, id_: "holi" })];
-    const index = await VectorStoreIndex.fromDocuments(docs);
-    queryEngine = index.asQueryEngine();
-    console.log("RAG index ready");
-  } catch (e) {
-    console.error("Error setting up RAG:", e);
-  }
-})();
 
 // --- API CHAT ROUTE ---
 app.post('/api/chat', async (req, res) => {

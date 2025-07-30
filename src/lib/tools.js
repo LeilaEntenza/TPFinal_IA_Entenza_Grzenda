@@ -2,6 +2,8 @@
 import { readFileSync, writeFileSync } from 'fs';
 import { Document, VectorStoreIndex } from "llamaindex";
 import fs from "fs/promises";
+import pdfjsLib from 'pdfjs-dist/legacy/build/pdf.js';
+
 
 // const DATA_FILE = './data/alumnos.json';
 
@@ -17,7 +19,6 @@ class Tools {
   async initRAG() {
     try {
       // Leer ambos PDFs y concatenar su texto
-      const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.js');
       const readPdfText = async (filePath) => {
         const data = await fs.readFile(filePath);
         const pdf = await pdfjsLib.getDocument({ data }).promise;
