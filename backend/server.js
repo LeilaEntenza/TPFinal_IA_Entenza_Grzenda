@@ -4,6 +4,8 @@ import { tool, agent } from "llamaindex";
 import { Ollama } from "@llamaindex/ollama";
 import { z } from "zod";
 import { Tools } from "../src/lib/tools.js"; // Adjust path if needed
+import fs from "fs/promises";
+import { Document, VectorStoreIndex } from "llamaindex";
 
 const app = express();
 app.use(cors({ origin: 'http://localhost:3000' }));
@@ -50,6 +52,20 @@ const agente = agent({
   verbose: false,
   systemPrompt,
 });
+
+// --- RAG SETUP ---
+let queryEngine;
+(async () => {
+  try {
+    const holiText = await fs.readFile("./Holi.txt", "utf-8");
+    const docs = [new Document({ text: holiText, id_: "holi" })];
+    const index = await VectorStoreIndex.fromDocuments(docs);
+    queryEngine = index.asQueryEngine();
+    console.log("RAG index ready");
+  } catch (e) {
+    console.error("Error setting up RAG:", e);
+  }
+})();
 
 // --- API CHAT ROUTE ---
 app.post('/api/chat', async (req, res) => {
@@ -115,6 +131,20 @@ app.post('/api/chat', async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Error procesando el mensaje' });
+  }
+});
+
+// --- API RAG ROUTE ---
+app.post('/api/rag', async (req, res) => {
+  const { question } = req.body;
+  if (!question) return res.status(400).json({ error: 'No question provided' });
+  if (!queryEngine) return res.status(503).json({ error: 'RAG index not ready' });
+  try {
+    const response = await queryEngine.query(question);
+    res.json({ reply: response.toString() });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error procesando la consulta RAG' });
   }
 });
 
