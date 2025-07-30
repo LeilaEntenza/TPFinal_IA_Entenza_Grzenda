@@ -1,14 +1,14 @@
 // Gestión de estudiantes
 import { readFileSync, writeFileSync } from 'fs';
 
-const DATA_FILE = './data/alumnos.json';
+// const DATA_FILE = './data/alumnos.json';
 
 class Tools {
   constructor() {
     this.estudiantes = [];
-    this.cargarEstudiantesDesdeJson();
+    // this.cargarEstudiantesDesdeJson();
   }
-  
+  /*
   cargarEstudiantesDesdeJson() {
     try {
       const data = JSON.parse(readFileSync(DATA_FILE, 'utf-8'));
@@ -60,7 +60,7 @@ class Tools {
 
   listarEstudiantes() {
     return this.estudiantes;
-  }
+  }*/
 }
 
 export { Tools }

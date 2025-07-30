@@ -57,7 +57,7 @@ const agente = agent({
 let queryEngine;
 (async () => {
   try {
-    const holiText = await fs.readFile("./Holi.txt", "utf-8");
+    const holiText = await fs.readFile("./data/Holi.txt", "utf-8");
     const docs = [new Document({ text: holiText, id_: "holi" })];
     const index = await VectorStoreIndex.fromDocuments(docs);
     queryEngine = index.asQueryEngine();
