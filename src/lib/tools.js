@@ -2,7 +2,10 @@
 import { readFileSync, writeFileSync } from 'fs';
 import { Document, VectorStoreIndex } from "llamaindex";
 import fs from "fs/promises";
-import pdfjsLib from 'pdfjs-dist/legacy/build/pdf.js';
+import * as pdfjsLib from 'pdfjs-dist/build/pdf.js';
+import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.js';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
 
 // const DATA_FILE = './data/alumnos.json';
