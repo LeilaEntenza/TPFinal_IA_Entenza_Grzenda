@@ -2,7 +2,6 @@
 import { readFileSync, writeFileSync } from 'fs';
 import { Document, VectorStoreIndex } from "llamaindex";
 import fs from "fs/promises";
-import pdfjsLib from 'pdfjs-dist/legacy/build/pdf.js';
 
 
 // const DATA_FILE = './data/alumnos.json';
@@ -18,28 +17,17 @@ class Tools {
 
   async initRAG() {
     try {
-      // Leer ambos PDFs y concatenar su texto
-      const readPdfText = async (filePath) => {
-        const data = await fs.readFile(filePath);
-        const pdf = await pdfjsLib.getDocument({ data }).promise;
-        let text = '';
-        for (let i = 1; i <= pdf.numPages; i++) {
-          const page = await pdf.getPage(i);
-          const content = await page.getTextContent();
-          text += content.items.map(item => item.str).join(' ') + '\n';
-        }
-        return text;
-      };
-      const codigoPenalText = await readPdfText("./data/CodigoPenal.pdf");
-      const constitucionText = await readPdfText("./data/Constitucion.pdf");
+      // Leer ambos TXT y concatenar su texto
+      const codigoPenalText = await fs.readFile("./data/CodigoPenal.txt", "utf-8");
+      const constitucionText = await fs.readFile("./data/Constitucion.txt", "utf-8");
       const fullText = codigoPenalText + "\n" + constitucionText;
       const docs = [new Document({ text: fullText, id_: "codigo_constitucion" })];
       const index = await VectorStoreIndex.fromDocuments(docs);
       this.queryEngine = index.asQueryEngine();
       this.ragReady = true;
-      console.log("RAG index ready (from Tools, PDF)");
+      console.log("RAG index ready (from Tools)");
     } catch (e) {
-      console.error("Error setting up RAG in Tools (PDF):", e);
+      console.error("Error setting up RAG in Tools:", e);
     }
   }
 
