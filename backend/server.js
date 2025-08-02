@@ -22,7 +22,7 @@ Simplemente debes responder las preguntas que te hagan, indicando qué es lo que
 `.trim();
 
 const ollamaLLM = new Ollama({
-  model: "smollm2:1.7b",
+  model: "qwen3:4b",
   temperature: 0.75,
   timeout: 2 * 60 * 1000,
 });
