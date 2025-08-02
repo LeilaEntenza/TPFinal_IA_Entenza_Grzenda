@@ -1,5 +1,3 @@
-// Gestión de estudiantes
-import { readFileSync, writeFileSync } from 'fs';
 import { Document, VectorStoreIndex } from "llamaindex";
 import fs from "fs/promises";
 
