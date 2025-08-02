@@ -3,7 +3,6 @@ import { readFileSync, writeFileSync } from 'fs';
 import { Document, VectorStoreIndex } from "llamaindex";
 import fs from "fs/promises";
 
-
 // const DATA_FILE = './data/alumnos.json';
 
 class Tools {
@@ -55,6 +54,7 @@ class Tools {
       writeFileSync(DATA_FILE, JSON.stringify({ alumnos: this.estudiantes }, null, 2));
       this.cargarEstudiantesDesdeJson();
     } catch (e) {
+ *  History restored 
       console.error("Error al guardar los estudiantes:", e);
       throw new Error("No se pudo guardar la lista de estudiantes.");
     }
