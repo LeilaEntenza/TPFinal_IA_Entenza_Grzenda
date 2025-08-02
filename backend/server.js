@@ -1,3 +1,4 @@
+import dotenv from "dotenv";
 import express from 'express';
 import cors from 'cors';
 import { tool, agent } from "llamaindex";
@@ -11,7 +12,7 @@ const app = express();
 app.use(cors({ origin: 'http://localhost:3000' }));
 app.use(express.json());
 
-const process = require('dotenv').config();
+dotenv.config();
 
 const tools = new Tools();
 
