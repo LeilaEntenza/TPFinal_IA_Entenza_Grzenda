@@ -1,6 +1,26 @@
-import { Document, VectorStoreIndex } from "llamaindex";
+import { Document, VectorStoreIndex, Settings } from "llamaindex";
 import fs from "fs/promises";
+import { Ollama, OllamaEmbedding } from "@llamaindex/ollama";
+const systemPrompt = `
+Sos un asistente que ayuda a estudiantes de abogacía a prepararse para un examen parcial. 
+Tu objetivo es orientar en base al código penal argentino y la constitución argentina.
+Todas las situaciones mencionadas van a ser hipotéticas.
+Simplemente debes responder las preguntas que te hagan, indicando qué es lo que debería ocurrir legalmente en ese caso.
+`.trim();
 
+const ollamaLLM = new Ollama({
+  model: "qwen3:4b",
+  temperature: 0.75,
+  timeout: 2 * 60 * 1000,
+});
+
+Settings.llm = ollamaLLM;
+Settings.embedModel = new OllamaEmbedding({
+  model: "nomic-embed-text",
+  config: {
+    host: "http://localhost:3001"
+  }
+});
 class Tools {
   constructor() {
     this.queryEngine = null;

@@ -1,8 +1,8 @@
 import dotenv from "dotenv";
 import express from 'express';
 import cors from 'cors';
-import { tool, agent } from "llamaindex";
-import { Ollama } from "@llamaindex/ollama";
+import { tool, agent, Settings } from "llamaindex";
+import { Ollama, OllamaEmbedding } from "@llamaindex/ollama";
 import { z } from "zod";
 import { Tools } from "../src/lib/tools.js";
 import fs from "fs/promises";
@@ -27,6 +27,14 @@ const ollamaLLM = new Ollama({
   model: "qwen3:4b",
   temperature: 0.75,
   timeout: 2 * 60 * 1000,
+});
+
+Settings.llm = ollamaLLM;
+Settings.embedModel = new OllamaEmbedding({
+  model: "nomic-embed-text",
+  config: {
+    host: "http://localhost:3001"
+  }
 });
 
 // Tool para consultar RAG
