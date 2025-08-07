@@ -1,4 +1,3 @@
-import dotenv from "dotenv";
 import express from 'express';
 import cors from 'cors';
 import { tool, agent, Settings } from "llamaindex";
@@ -12,9 +11,8 @@ const app = express();
 app.use(cors({ origin: 'http://localhost:3000' }));
 app.use(express.json());
 
-dotenv.config();
-
 const tools = new Tools();
+tools.initRAG();
 
 const systemPrompt = `
 Sos un asistente que ayuda a estudiantes de abogacía a prepararse para un examen parcial. 
