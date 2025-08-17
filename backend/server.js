@@ -1,11 +1,29 @@
 import express from 'express';
 import cors from 'cors';
 import { tool, agent, Settings } from "llamaindex";
-import { Ollama, OllamaEmbedding } from "@llamaindex/ollama";
+import { Ollama } from "@llamaindex/ollama";
 import { z } from "zod";
 import { Tools } from "../src/lib/tools.js";
-import fs from "fs/promises";
-import { Document, VectorStoreIndex } from "llamaindex";
+import { pipeline } from "@xenova/transformers";
+
+// Clase para embeddings usando Transformers.js
+class XenovaEmbedding {
+  constructor() {
+    this.extractorPromise = pipeline("feature-extraction", "Xenova/all-MiniLM-L6-v2");
+  }
+
+  async getTextEmbedding(text) {
+    const extractor = await this.extractorPromise;
+    const output = await extractor(text, { pooling: "mean", normalize: true });
+    return Array.from(output.data);
+  }
+
+  async getTextEmbeddings(texts) {
+    const extractor = await this.extractorPromise;
+    const outputs = await Promise.all(texts.map(t => extractor(t, { pooling: "mean", normalize: true })));
+    return outputs.map(o => Array.from(o.data));
+  }
+}
 
 const app = express();
 app.use(cors({ origin: 'http://localhost:3000' }));
@@ -21,19 +39,13 @@ Todas las situaciones mencionadas van a ser hipotéticas.
 Simplemente debes responder las preguntas que te hagan, indicando qué es lo que debería ocurrir legalmente en ese caso.
 `.trim();
 
-const ollamaLLM = new Ollama({
-  model: "qwen3:4b",
-  temperature: 0.75,
-  timeout: 2 * 60 * 1000,
+// Configuración de LLM y embeddings
+Settings.llm = new Ollama({
+  model: "qwen3:8b",
+  temperature: 0.7,
+  systemPrompt,
 });
-
-Settings.llm = ollamaLLM;
-Settings.embedModel = new OllamaEmbedding({
-  model: "nomic-embed-text",
-  config: {
-    host: "http://localhost:3001"
-  }
-});
+Settings.embedModel = new XenovaEmbedding();
 
 // Tool para consultar RAG
 const consultarRAGTool = tool({
