@@ -1,68 +1,61 @@
 import express from 'express';
 import cors from 'cors';
-import { tool, agent, Settings } from "llamaindex";
+import { LLMAgent, Settings } from "llamaindex";
 import { Ollama } from "@llamaindex/ollama";
 import { z } from "zod";
-import { Tools } from "../src/lib/tools.js";
-import { pipeline } from "@xenova/transformers";
-
-// Clase para embeddings usando Transformers.js
-class XenovaEmbedding {
-  constructor() {
-    this.extractorPromise = pipeline("feature-extraction", "Xenova/all-MiniLM-L6-v2");
-  }
-
-  async getTextEmbedding(text) {
-    const extractor = await this.extractorPromise;
-    const output = await extractor(text, { pooling: "mean", normalize: true });
-    return Array.from(output.data);
-  }
-
-  async getTextEmbeddings(texts) {
-    const extractor = await this.extractorPromise;
-    const outputs = await Promise.all(texts.map(t => extractor(t, { pooling: "mean", normalize: true })));
-    return outputs.map(o => Array.from(o.data));
-  }
-}
+import { Tools } from "./tools.js";
 
 const app = express();
 app.use(cors({ origin: 'http://localhost:3000' }));
 app.use(express.json());
 
 const tools = new Tools();
-tools.initRAG();
+
+// Inicializar RAG al arrancar
+(async () => {
+  try {
+    await tools.initRAG();
+  } catch (error) {
+    console.error("❌ Error inicializando RAG:", error);
+  }
+})();
 
 const systemPrompt = `
 Sos un asistente que ayuda a estudiantes de abogacía a prepararse para un examen parcial. 
 Tu objetivo es orientar en base al código penal argentino y la constitución argentina.
 Todas las situaciones mencionadas van a ser hipotéticas.
 Simplemente debes responder las preguntas que te hagan, indicando qué es lo que debería ocurrir legalmente en ese caso.
-`.trim();
 
-// Configuración de LLM y embeddings
-Settings.llm = new Ollama({
-  model: "qwen3:8b",
+IMPORTANTE: Siempre piensa paso a paso antes de responder. Usa el formato <think>...</think> para mostrar tu proceso de pensamiento.
+`;
+
+// Configuración de LLM
+const llm = new Ollama({
+  model: "qwen3:4b",
   temperature: 0.7,
   systemPrompt,
 });
-Settings.embedModel = new XenovaEmbedding();
 
 // Tool para consultar RAG
-const consultarRAGTool = tool({
+const consultarRAGTool = {
   name: "consultarRAG",
-  description: "Consulta la constitución y el código penal usando RAG para responder preguntas.",
-  parameters: z.object({
-    question: z.string().describe("La pregunta a responder usando la constitución y el código penal"),
-  }),
+  description: "Consulta la constitución y el código penal usando RAG para responder preguntas legales.",
+  parameters: {
+    question: {
+      type: "string",
+      description: "La pregunta legal a responder usando la constitución y el código penal"
+    }
+  },
   execute: async ({ question }) => {
     return await tools.consultarRAG(question);
   },
-});
+};
 
-const agente = agent({
+// Crear agente con RAG
+const agente = new LLMAgent({
   tools: [consultarRAGTool],
-  llm: ollamaLLM,
-  verbose: false,
+  llm: llm,
+  verbose: true, // Mostrar pensamientos
   systemPrompt,
 });
 
@@ -72,67 +65,86 @@ app.post('/api/chat', async (req, res) => {
   if (!message) return res.status(400).json({ error: 'No message provided' });
 
   try {
+    console.log('🤔 Pregunta recibida:', message);
+    
+    // Usar el agente con RAG
     let respuesta = await agente.run(message);
+    
+    console.log('🧠 Respuesta completa del agente:', respuesta);
 
-    // Remove <think>...</think> blocks and leading/trailing whitespace/newlines
-    if (typeof respuesta === "string") {
-      respuesta = respuesta.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
-      // If the response is a JSON string, try to extract a 'result' or similar field
+    // Extraer pensamientos y respuesta final
+    let pensamientos = "";
+    let respuestaFinal = respuesta;
+
+    // Buscar bloques <think>...</think>
+    const thinkMatches = respuesta.match(/<think>([\s\S]*?)<\/think>/g);
+    if (thinkMatches) {
+      pensamientos = thinkMatches.map(think => 
+        think.replace(/<\/?think>/g, '').trim()
+      ).join('\n\n');
+      
+      // Remover bloques de pensamiento de la respuesta final
+      respuestaFinal = respuesta.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+    }
+
+    // Limpiar la respuesta final
+    if (typeof respuestaFinal === "string") {
+      // Si la respuesta es JSON, extraer el contenido
       try {
-        const parsed = JSON.parse(respuesta);
+        const parsed = JSON.parse(respuestaFinal);
         if (parsed && typeof parsed === 'object') {
-          // Extraer el texto más humano posible, sin mostrar 'data', 'result', ni JSON
           if (parsed.data && parsed.data.result) {
-            respuesta = parsed.data.result;
+            respuestaFinal = parsed.data.result;
           } else if (parsed.result) {
-            respuesta = parsed.result;
+            respuestaFinal = parsed.result;
           } else if (parsed.reply) {
-            respuesta = parsed.reply;
+            respuestaFinal = parsed.reply;
           } else {
-            // Si no hay campo claro, buscar el primer string dentro del objeto
             const firstString = Object.values(parsed).find(v => typeof v === 'string');
-            respuesta = firstString || JSON.stringify(parsed, null, 2);
+            respuestaFinal = firstString || JSON.stringify(parsed, null, 2);
           }
         }
       } catch (e) {
-        // Not JSON, keep as is
-      }
-    } else {
-      respuesta = JSON.stringify(respuesta);
-    }
-
-    // Limpiar cualquier bloque <think> y espacios extra
-    respuesta = respuesta.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
-    // Si la respuesta sigue pareciendo JSON, intentar extraer solo el texto
-    if (/^\{.*\}$/.test(respuesta)) {
-      try {
-        const parsed = JSON.parse(respuesta);
-        if (parsed && typeof parsed === 'object') {
-          if (parsed.data && parsed.data.result) {
-            respuesta = parsed.data.result;
-          } else if (parsed.result) {
-            respuesta = parsed.result;
-          } else if (parsed.reply) {
-            respuesta = parsed.reply;
-          } else {
-            const firstString = Object.values(parsed).find(v => typeof v === 'string');
-            respuesta = firstString || respuesta;
-          }
-        }
-      } catch (e) {
-        // keep as is
+        // No es JSON, mantener como está
       }
     }
-    // Eliminar saltos de línea iniciales/finales
-    respuesta = String(respuesta).trim();
 
-    res.json({ reply: respuesta });
+    // Eliminar espacios extra y saltos de línea
+    respuestaFinal = String(respuestaFinal).trim();
+
+    res.json({ 
+      reply: respuestaFinal,
+      thoughts: pensamientos,
+      fullResponse: respuesta
+    });
+
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Error procesando el mensaje' });
+    console.error('❌ Error en /api/chat:', error);
+    res.status(500).json({ 
+      error: 'Error procesando el mensaje: ' + error.message,
+      thoughts: "Error al procesar la consulta"
+    });
   }
 });
 
+// Ruta de prueba
+app.get('/test', (req, res) => {
+  res.json({ 
+    message: 'Backend funcionando correctamente!',
+    ragStatus: tools.ragReady ? 'RAG activo' : 'RAG no disponible'
+  });
+});
+
+// Ruta de estado del RAG
+app.get('/rag-status', (req, res) => {
+  res.json({ 
+    ragReady: tools.ragReady,
+    status: tools.ragReady ? 'RAG funcionando' : 'RAG no disponible'
+  });
+});
+
 app.listen(3001, () => {
-  console.log('Server running on http://localhost:3001');
+  console.log('✅ Backend funcionando en http://localhost:3001');
+  console.log('🧠 Agente con RAG configurado');
+  console.log('📚 Leyendo documentos de código penal y constitución...');
 });
